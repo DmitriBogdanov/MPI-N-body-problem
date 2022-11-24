@@ -3,7 +3,13 @@
 
 Contains serial and parallel (MPI) implementations of standard N-body problem:
 
-TODO: Write N-body problem in LaTeX
+Let $m_i$ --- bodies' masses, that we will consider as material points,
+\[
+r_i(0) = r_{i0} = (x_{i0}, y_{i0}, z_{i0})^{T} \text{--- initial bodies' positions,}
+\]
+\[
+v_i(0) = v_{i0} = (v_{x,i0}, v{y,i0}, v_{z,i0})^{T} \text{--- initial bodies' velocities.}
+\]
 
 ## Compilation
 
