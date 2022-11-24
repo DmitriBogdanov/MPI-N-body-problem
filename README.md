@@ -9,7 +9,7 @@ $$v_i(0) = v_{i0} = (v_{x,i0}, v_{y,i0}, v_{z,i0})^{T} \quad \text{- initial bod
 
 The motion of bodies is described by a system of ordinary differential equations, which
 obtained from Newton's equations:
-&&\dfrac{dr_i}{dt} = v_i$, \quad\dfrac{dv_i}{dt} = a_i$.&&
+$$\dfrac{dr_i}{dt} = v_i$, \quad\dfrac{dv_i}{dt} = a_i$.$$
 
 ## Compilation
 
