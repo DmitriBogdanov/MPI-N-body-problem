@@ -13,7 +13,7 @@ $$\dfrac{dr_i}{dt} = v_i, \quad\dfrac{dv_i}{dt} = a_i,$$
 
 where $a_i$ - the i-th body's acceleration, which is calculated according to the law of the universal
 gravity:
-$$ a_i = -\sum\limits_{j = 1, \, i \ne j}^{N}{\dfrac{G m_j (r_i - r_j)}{|r_i - r_j|^3}}.$$
+$$ a_i = -\limits\sum_{j = 1, \, i \ne j}^{N}{\dfrac{G m_j (r_i - r_j)}{|r_i - r_j|^3}}.$$
 
 ## Compilation
 
