@@ -11,8 +11,9 @@ struct Vec3 {
 
 	Vec3() : x(0), y(0), z(0) {}
 	Vec3(T x, T y, T z) : x(x), y(y), z(z) {}
+	Vec3(const Vec3 & other) : x(other.x), y(other.y), z(other.z) {};
 
-	inline Vec3 operator=(const Vec3 &other) {
+	inline Vec3 operator=(const Vec3 & other) {
 		this->x = other.x; this->y = other.y; this->z = other.z;
 		return *this;
 	}

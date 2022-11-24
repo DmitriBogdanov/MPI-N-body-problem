@@ -11,8 +11,7 @@
 #include <iostream>
 #include <fstream> // test
 #include <functional>
-
-///#include <mpi.h>
+#include <mpi.h>
 
 #define MPI_T MPI_DOUBLE
 #define MASTER_PROCESS 0
@@ -20,6 +19,7 @@
 
 using T = double;
 inline static auto &outstream = std::cout;
+inline static auto &instream = std::cin;
 
 // Math
 const T PI = 3.14159265358979323846;
