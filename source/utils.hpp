@@ -6,6 +6,10 @@
 /// Fix for VS2019 incorrectly assuming that args of some MPI function lie outside the proper range
 #pragma warning (disable: 28020)
 
+/// In given project class members don't have to be default-initialized (to save resources)
+#pragma warning (disable: 26495)
+
+
 #include <memory>
 #include <cmath>
 #include <iostream>
@@ -43,7 +47,7 @@ UniquePtrArray make_raw_array(size_t size) {
 
 UniquePtrArray make_raw_array(size_t size, T defaultValue) {
 	UniquePtrArray arr(new T[size]);
-	for (int k = 0; k < size; ++k) arr[k] = defaultValue;
+	for (size_t k = 0; k < size; ++k) arr[k] = defaultValue;
 	return arr;
 }
 
@@ -65,4 +69,20 @@ inline void exit_with_error(const std::string &msg) {
 	outstream << "ERROR: " << msg << "\n";
 	///MPI_Finalize();
 	exit(1);
+}
+
+bool rand_bool() {
+	return static_cast<bool>(rand() % 2);
+}
+
+int rand_int(int min, int max) {
+	return min + rand() % (max - min + 1);
+}
+
+T rand_T() {
+	return rand() / (RAND_MAX + 1.);
+}
+
+T rand_T(T min, T max) {
+	return min + (max - min) * rand_T();
 }

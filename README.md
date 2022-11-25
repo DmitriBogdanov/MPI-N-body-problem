@@ -26,6 +26,16 @@ $$a_i = -\sum\limits_{j = 1, i \ne j}^{N}{\dfrac{G m_j (r_i - r_j)}{\left|r_i - 
 
 ## Version history
 
+* 00.03
+    * Stylistic changes, optimizations, refactors
+    * Added generation of random bodies uniformly distributed in a spherical layer
+    * Added automatic reset of output files
+    * Added visualization for N bodies
+
+* 00.02
+    * Implemented N-body problem for N = 4
+    * Created visualization in Mathematica for 4 bodies
+
 * 00.01
     * Implemented rough structure of serial method
 

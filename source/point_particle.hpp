@@ -1,35 +1,35 @@
 #pragma once
+
 #include "utils.hpp"
 #include "vec3.hpp"
 
-struct point_particle
-{
-	Vec3 x_; //coordinates 
-	Vec3 V_; //velocities  
-	T mass_; //mass
+// Bodies are assumed to be material points
+struct Body {
+	Vec3 position;
+	Vec3 velocity; 
+	T mass;
 
-	point_particle(T mass, Vec3 x, Vec3 V) : mass_(mass), x_(x), V_(V) {};
-	point_particle(std::vector<T> all) : mass_(all[0]), x_(Vec3(all[1], all[2], all[3])), V_(Vec3(all[4], all[5], all[6])) {};
+	Body() = default;
+	Body(T mass, Vec3 x, Vec3 V) : mass(mass), position(x), velocity(V) {};
 
-	inline point_particle operator=(const point_particle & other) {
-		this->x_ = other.x_; this->V_ = other.V_; this->mass_ = other.mass_;
+	inline Body operator=(const Body & other) {
+		this->position = other.position; this->velocity = other.velocity; this->mass = other.mass;
 		return *this;
 	}
 
 	// Conversion
 	inline std::string toString(const std::string &begin = "", const std::string &delimer = " ", const std::string &end = "") const {
 		return begin +
-			std::to_string(this->mass_) + delimer +
-			x_.toString() + delimer +
-			V_.toString() + 
+			std::to_string(this->mass) + delimer +
+			position.toString() + delimer +
+			velocity.toString() + 
 			end;
 	}
 };
 
-using SpaceVec = std::vector<point_particle>;
+using ArrayOfBodies = std::vector<Body>;
 
-void copy(const SpaceVec& from, SpaceVec& to)
-{
+void copy(const ArrayOfBodies& from, ArrayOfBodies& to) {
 	for (size_t i = 0; i < from.size(); ++i){
 		to[i] = from[i];
 	}

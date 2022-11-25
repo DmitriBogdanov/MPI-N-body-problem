@@ -11,9 +11,9 @@ struct Vec3 {
 
 	Vec3() : x(0), y(0), z(0) {}
 	Vec3(T x, T y, T z) : x(x), y(y), z(z) {}
-	Vec3(const Vec3 & other) : x(other.x), y(other.y), z(other.z) {};
+	Vec3(const Vec3 &other) : x(other.x), y(other.y), z(other.z) {};
 
-	inline Vec3 operator=(const Vec3 & other) {
+	inline Vec3 operator=(const Vec3 &other) {
 		this->x = other.x; this->y = other.y; this->z = other.z;
 		return *this;
 	}
@@ -71,3 +71,15 @@ struct Vec3 {
 		return sqrt(this->x * this->x + this->y * this->y + this->z * this->z);
 	}
 };
+
+Vec3 make_random_vector(T length_min, T length_max) {
+	const T r = rand_T(length_min, length_max);
+	const T phi = rand_T(0, 2 * PI);
+	const T theta = rand_T(-0.5 * PI, 0.5 * PI);
+
+	return Vec3(
+		r * cos(theta) * cos(phi),
+		r * cos(theta) * sin(phi),
+		r * sin(theta)
+	);
+}

@@ -6,130 +6,120 @@
 #include "point_particle.hpp"
 
 const T G = 6.67e-11;
+const T EPSILON = 1e-5;
 
-inline Vec3 acceleration(const Vec3 & dr, T mass) {
-	return(dr * G * mass / cube(dr.norm()));
+inline Vec3 acceleration(const Vec3 &dr, T mass) {
+	return dr * G * mass / std::max(cube(dr.norm()), cube(EPSILON));
 }
 
-inline Vec3 acceleration(const Vec3 & dr, T mass, T epsilon) {
-	return( dr * G * mass / std::max(cube(dr.norm()), cube(epsilon)) );
+void clean_folder(const std::string &folder) {
+	for (const auto &entry : std::filesystem::directory_iterator(folder))
+		std::filesystem::remove_all(entry.path());
 }
 
-// Initial data has certain format: 
-// N - number of bodies
-// m1 x10 y10 z10 Vx10 Vy10 Vz10 - mass, initial coordinates and velocities of the first body
-// ...
-// mN xN0 yN0 zN0 VxN0 VyN0 VzN0 - mass, initial coordinates and velocities of the last body
-void import_initial_data(SpaceVec & bodies, 
-						 size_t& N,		
-						 const std::string & data_filename){
-	std::ifstream inFile(data_filename);
-	if (!inFile.is_open()) exit_with_error("Could not open input file");
-	inFile >> N;
-	outstream << "Number of bodies: " << N << "\n";
-	bodies.reserve(N);
-
-	std::vector<T> body(7, static_cast<T>(0));
-	for(int i = 0; i < N; ++i){
-		inFile >> body[0] >> body[1] >> body[2] >> body[3] >> body[4] >> body[5] >> body[6];
-		bodies.push_back(body);
+void create_empty_files(const std::vector<std::string> &filenames) {
+	for (const auto &filename : filenames) {
+		std::ofstream outFile(filename);
 	}
-
-	outstream << "Bodies: \n";
-	for(auto &x: bodies)
-		outstream << x.toString() << "\n";
-
 }
 
-void export_time_layer(const SpaceVec & bodies,
-					   std::vector<std::string> & filenames,
-					   size_t& N,
-					   T step) {
+void export_time_layer(
+	T t,
+	const ArrayOfBodies &bodies,
+	const std::vector<std::string> &filenames
+) {
+	const size_t N = bodies.size();
+
 	std::ofstream outFile;
+
 	for (size_t i = 0; i < N; ++i) {
-		outFile.open(filenames[i], std::ios::app);
+
+		outFile.open(filenames[i], std::ios::app); // open for append
 		if (!outFile.is_open()) exit_with_error("Could not open output file " + filenames[i]);
-		outFile << step << " " << bodies[i].x_.x << " " << bodies[i].x_.y << " " << bodies[i].x_.z << "\n";
+
+		outFile
+			<< t << ' '
+			<< bodies[i].position.x << ' ' << bodies[i].position.y << ' ' << bodies[i].position.z << '\n';
+
 		outFile.close();
 	}
 }
 
-//void update_right_part(const SpaceVec& bodies, std::vector<Vec3> & right_part, const size_t N) {
-//	// Fill velocities (1st half of right_part)
-//	for (size_t i = 0; i < N; ++i) {
-//		right_part[i] = bodies[i].V_;
-//	}
-//
-//	// Compute gravity acceleration (2nd half of right_part)
-//	for (size_t i = 0; i < N; ++i) {
-//		right_part[N + i] = {0, 0, 0 };
-//			for (size_t j = 0; j < N; ++j) {
-//				//if (i != j) {
-//				const auto dr = bodies[i].x_ - bodies[j].x_;
-//				right_part[N + i] -= acceleration(dr, bodies[j].mass_, 1e-3);
-//				//}
-//			}
-//	}
-//}
 
-void nbody(const std::string & init_data_filename, 
-	       const std::string & res_data_foldername,
-		   size_t iterations,  
-		   T time_interval,
-		   size_t divider
+inline void nbody_serial(
+	ArrayOfBodies bodies, // pas-by-copy since we're going to modify bodies localy 
+	const T TIME_INTERVAL,
+	const size_t iterations,  
+	const size_t time_layer_export_step,
+	const std::string &output_folder
 ) {
-	T tau = time_interval / iterations;
-	SpaceVec bodies, temp_bodies;
-	size_t N;
-	import_initial_data(bodies, N, init_data_filename);
-	import_initial_data(temp_bodies, N, init_data_filename);
+	const size_t N = bodies.size();
+	const T tau = TIME_INTERVAL / iterations;
 
-	// Allocate space for Runge - Kutta method
+	// Each body stores it's positions in a separate file 'positions_<index>'
+	// using 't  pos.x  pos.y  pos.z' format on each line
+
+	// Setup filenames
 	std::vector<std::string> filenames(N);
+	for (size_t i = 0; i < N; ++i) filenames[i] = output_folder + "/positions_" + std::to_string(i + 1) + ".txt";
 
-	// Fill filenames
-	if (!std::filesystem::exists(res_data_foldername)) std::filesystem::create_directory(res_data_foldername);
-	for (size_t i = 0; i < N; ++i) filenames[i]  = res_data_foldername + "/traj_" + std::to_string(i + 1) + ".txt";
-	export_time_layer(bodies, filenames, N, 0);
+	// Ensure 'data' folder exists
+	if (!std::filesystem::exists(output_folder)) std::filesystem::create_directory(output_folder);
+
+	// Preallocate space for Runge-Kutta temp variables
+	std::vector<Vec3> a(N);
+	Vec3 temp_a;
+	std::vector<Body> temp_bodies(N);
+
+	// Reset files and export fiest time layer
+	clean_folder(output_folder);
+	create_empty_files(filenames);
+	export_time_layer(T(0), bodies, filenames);
 
 	// ---------------------------
 	// --- Iteration over time ---
 	// ---------------------------
 	for (size_t i = 0; i < iterations; i++) {
-		// Explicit Euler iteration
+
+		// ---------------------
+		// --- Runge-Kutta 2 ---
+		// ---------------------
+
+		copy(bodies, temp_bodies);
+
+		// k1 = f(t_n, y_n)
+		for (size_t i = 0; i < N; ++i) {
+			a[i] = { 0, 0, 0 };
+			for (size_t j = 0; j < N; ++j)
+				a[i] -= acceleration(bodies[i].position - bodies[j].position, bodies[j].mass);
+
+			temp_bodies[i].position += bodies[i].velocity * tau;
+			temp_bodies[i].velocity += a[i] * tau;
+		}
+		// y_n+1 = y_n + tau * f(t_n + 1/2 tau, y_n + 1/2 tau k1)
+		for (size_t i = 0; i < N; ++i) {
+			temp_a = { 0, 0, 0 };
+			for (size_t j = 0; j < N; ++j)
+				temp_a -= acceleration(temp_bodies[i].position - temp_bodies[j].position, temp_bodies[j].mass);
+
+			bodies[i].position += (temp_bodies[i].velocity + bodies[i].velocity) * tau * T(0.5);
+			bodies[i].velocity += (a[i] + temp_a) * tau * T(0.5);
+		}
+
+		// Export time layer with respect to 'TIME_LAYER_EXPORT_STEP'
+		if(!((i + 1) % time_layer_export_step)) export_time_layer(tau * (i + 1), bodies, filenames);
+	}
+}
+
+
+
+// Explicit Euler iteration
 		/*for (size_t i = 0; i < N; ++i) {
 			Vec3 accel = { 0, 0, 0 };
 			for (size_t j = 0; j < N; ++j) {
-				const auto dr = bodies[i].x_ - bodies[j].x_;
-				accel -= acceleration(dr, bodies[j].mass_, 1e-3);
+				const auto dr = bodies[i].position - bodies[j].position;
+				accel -= acceleration(dr, bodies[j].mass, 1e-3);
 			}
-			bodies[i].x_ += bodies[i].V_ * tau;
-			bodies[i].V_ += accel * tau;
+			bodies[i].position += bodies[i].velocity * tau;
+			bodies[i].velocity += accel * tau;
 		}*/
-		// Explicit Runge - Kutta order 2
-		std::vector<Vec3> accel(N);
-		Vec3 accel_temp;
-		for (size_t i = 0; i < N; ++i) {
-			accel[i].x = 0;  accel[i].y = 0; accel[i].z = 0;
-			for (size_t j = 0; j < N; ++j) {
-				const auto dr = bodies[i].x_ - bodies[j].x_;
-				accel[i] -= acceleration(dr, bodies[j].mass_, 1e-5);
-			}
-			temp_bodies[i].x_ += bodies[i].V_ * tau;
-			temp_bodies[i].V_ += accel[i] * tau;
-		}
-		for (size_t i = 0; i < N; ++i) {
-			accel_temp = { 0, 0, 0 };
-			for (size_t j = 0; j < N; ++j) {
-				const auto dr = temp_bodies[i].x_ - temp_bodies[j].x_;
-				accel_temp -= acceleration(dr, temp_bodies[j].mass_, 1e-5);
-			}
-			bodies[i].x_ += (temp_bodies[i].V_ + bodies[i].V_) * tau / 2;
-			bodies[i].V_ += (accel[i] + accel_temp) * tau / 2;
-		}
-		/// Write time layer to file if i % divider != 0 
-		if(!((i + 1) % divider)) export_time_layer(bodies, filenames, N, tau * (i + 1));
-
-		copy(bodies, temp_bodies);
-	}
-}
