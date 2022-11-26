@@ -5,9 +5,9 @@
 
 // Bodies are assumed to be material points
 struct Body {
+	T mass;
 	Vec3 position;
 	Vec3 velocity; 
-	T mass;
 
 	Body() = default;
 	Body(T mass, Vec3 x, Vec3 V) : mass(mass), position(x), velocity(V) {};

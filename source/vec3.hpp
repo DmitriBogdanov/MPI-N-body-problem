@@ -74,6 +74,19 @@ struct Vec3 {
 	inline T norm2() const {
 		return (this->x * this->x + this->y * this->y + this->z * this->z);
 	}
+
+	inline T norm3() const {
+		const T norm2 = this->x * this->x + this->y * this->y + this->z * this->z;
+		return norm2 * sqrt(norm2);
+	}
+
+	void set(T x, T y, T z) {
+		this->x = x; this->y = x; this->z = z;
+	}
+
+	void set_zero() {
+		this->x = 0; this->y = 0; this->z = 0;
+	}
 };
 
 Vec3 make_random_vector(T length_min, T length_max) {

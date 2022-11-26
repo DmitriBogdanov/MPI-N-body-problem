@@ -71,6 +71,10 @@ inline void exit_with_error(const std::string &msg) {
 	exit(1);
 }
 
+std::string bool_to_int(bool arg) {
+	return arg ? "TRUE" : "FALSE";
+}
+
 bool rand_bool() {
 	return static_cast<bool>(rand() % 2);
 }

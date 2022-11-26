@@ -26,6 +26,11 @@ $$a_i = -\sum\limits_{j = 1, i \ne j}^{N}{\dfrac{G m_j (r_i - r_j)}{\left|r_i - 
 
 ## Version history
 
+* 00.04
+    * Fixed convergence order computatuion
+    * Rearranged operations and memory access in Runge-Kutta iterations for optimal performance
+    * Added display methods and bechmarking logic
+
 * 00.03
     * Stylistic changes, optimizations, refactors
     * Added generation of random bodies uniformly distributed in a spherical layer

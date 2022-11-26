@@ -16,9 +16,9 @@ const size_t TIME_LAYER_EXPORT_STEP = ITERATIONS / 200;
       std::string input_filename = "[input]/{4_body_test}[bodies].txt";
 const std::string OUTPUT_FOLDER  = "[output]/[positions]";
 
-
-bool TEST_CONVERGENCE_ORDER = true;
-bool USE_RANDOM_BODIES = false;
+bool MODE = DEFAULT_MODE;
+bool TEST_CONVERGENCE_ORDER = false;
+bool USE_RANDOM_BODIES = true;
 
 // # Random config #
 const size_t RANDOM_N = 2500;
@@ -90,6 +90,14 @@ void generate_random_input(
 
 
 int main(int argc, char* argv[]) {
+
+	// ---------------------
+	// --- Parsing input ---
+	// ---------------------
+
+	StaticTimer::start();
+	std::cout << ">>> Parsing input...\n";
+
 	// Generate random bodies if 'USE_RANDOM_BODIES' is selected
 	if (USE_RANDOM_BODIES) {
 		generate_random_input(
@@ -107,15 +115,44 @@ int main(int argc, char* argv[]) {
 	ArrayOfBodies bodies;
 	parse_bodies_from_file(input_filename, bodies);
 
+	std::cout
+		<< "Parsed in " << StaticTimer::end() << "sec\n"
+		<< "--------------------------------------------------\n"
+		<< "Input file    -> " << input_filename << "\n"
+		<< "Output folder -> " << OUTPUT_FOLDER << "\n"
+		<< "Order test    -> " << bool_to_int(TEST_CONVERGENCE_ORDER) << "\n"
+		<< "Mode          -> " << (MODE ? "BENCHMARK" : "DEFAULT") << "\n"
+		<< "N             =  " << bodies.size() << "\n"
+		<< "Time interval =  " << TIME_INTERVAL << "\n"
+		<< "Iterations    =  " << ITERATIONS << "\n"
+		<< "Step          =  " << TIME_INTERVAL / ITERATIONS << "\n"
+		<< "Export step   =  " << TIME_LAYER_EXPORT_STEP << "\n"
+		<< "--------------------------------------------------\n\n";
+
 	// Method
-	
+	table_add_1("Method");
+	table_add_2("Time (sec)");
+	table_add_3("Speedup");
+	table_hline();
 
-	nbody_serial(bodies, TIME_INTERVAL, ITERATIONS, TIME_LAYER_EXPORT_STEP, OUTPUT_FOLDER);
+	double timeSerial;
+	///double timeParallel;
 
+	// 1. Method
+	table_add_1("Serial");
+
+	// 2. Time
+	StaticTimer::start();
+	nbody_serial(bodies, TIME_INTERVAL, ITERATIONS, TIME_LAYER_EXPORT_STEP, OUTPUT_FOLDER, MODE);
+	timeSerial = StaticTimer::end();
+
+	table_add_2(timeSerial);
 	
+	// 3. Speedup
+	table_add_3(timeSerial / timeSerial);
 
 	// Convergence order test
-	if (TEST_CONVERGENCE_ORDER) {
+	if (MODE != BENCHMARK_MODE && TEST_CONVERGENCE_ORDER) {
 		nbody_serial(bodies, TIME_INTERVAL, ITERATIONS, TIME_LAYER_EXPORT_STEP, OUTPUT_FOLDER_ORDER_TEST_1);
 		nbody_serial(bodies, TIME_INTERVAL, q * ITERATIONS, q * TIME_LAYER_EXPORT_STEP, OUTPUT_FOLDER_ORDER_TEST_2);
 		nbody_serial(bodies, TIME_INTERVAL, q * q * ITERATIONS, q * q * TIME_LAYER_EXPORT_STEP, OUTPUT_FOLDER_ORDER_TEST_3);
