@@ -42,7 +42,7 @@
 (*Manipulate[*)
 (*ListPointPlot3D[\[CapitalXi]positions\[FilledSquare]by\[FilledSquare]layer[[layer]],*)
 (*PlotLabel->Row@{*)
-(*Framed["layer = "<>ToString@layer],*)
+(*Framed["layer = "<>ToString@NumberForm[layer,{3,1}]],*)
 (*"  ",*)
 (*Framed["t = "<>ToString@\[CapitalXi]times\[FilledSquare]by\[FilledSquare]layer[[layer]]]*)
 (*},*)

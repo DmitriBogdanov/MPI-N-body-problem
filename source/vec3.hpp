@@ -70,6 +70,10 @@ struct Vec3 {
 	inline T norm() const {
 		return sqrt(this->x * this->x + this->y * this->y + this->z * this->z);
 	}
+
+	inline T norm2() const {
+		return (this->x * this->x + this->y * this->y + this->z * this->z);
+	}
 };
 
 Vec3 make_random_vector(T length_min, T length_max) {

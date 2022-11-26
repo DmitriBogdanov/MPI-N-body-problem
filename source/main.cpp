@@ -8,22 +8,30 @@
 
 // # Config #
 const T TIME_INTERVAL = 20;
-const size_t ITERATIONS = 2000;
-const size_t TIME_LAYER_EXPORT_STEP = 10;
+const size_t ITERATIONS = 200;
+const size_t TIME_LAYER_EXPORT_STEP = ITERATIONS / 200;
 	// set 'TIME_LAYER_EXPORT_STEP > ITERATIONS'
 	// to benhmark without accounting for writes
 
       std::string input_filename = "[input]/{4_body_test}[bodies].txt";
 const std::string OUTPUT_FOLDER  = "[output]/[positions]";
 
-// # Random config #
+
+bool TEST_CONVERGENCE_ORDER = true;
 bool USE_RANDOM_BODIES = false;
 
-const size_t RANDOM_N = 40;
+// # Random config #
+const size_t RANDOM_N = 2500;
 const T RANDOM_M_MIN = 1, RANDOM_M_MAX = 10; // mass (range)
 const T RANDOM_R_MIN = 30, RANDOM_R_MAX = 32; // position(spherical section)
 const T RANDOM_V_MIN = 1, RANDOM_V_MAX = 2; // velocity (range)
 const std::string RANDOM_FILENAME = "[input]/[generated_random_bodies].txt";
+
+// # Convergence test config #
+const std::string OUTPUT_FOLDER_ORDER_TEST_1 = "[output]/{order_test_1}[positions]";
+const std::string OUTPUT_FOLDER_ORDER_TEST_2 = "[output]/{order_test_2}[positions]";
+const std::string OUTPUT_FOLDER_ORDER_TEST_3 = "[output]/{order_test_3}[positions]";
+const T q = 2;
 
 
 // Input format: 
@@ -100,6 +108,17 @@ int main(int argc, char* argv[]) {
 	parse_bodies_from_file(input_filename, bodies);
 
 	// Method
+	
+
 	nbody_serial(bodies, TIME_INTERVAL, ITERATIONS, TIME_LAYER_EXPORT_STEP, OUTPUT_FOLDER);
+
+	
+
+	// Convergence order test
+	if (TEST_CONVERGENCE_ORDER) {
+		nbody_serial(bodies, TIME_INTERVAL, ITERATIONS, TIME_LAYER_EXPORT_STEP, OUTPUT_FOLDER_ORDER_TEST_1);
+		nbody_serial(bodies, TIME_INTERVAL, q * ITERATIONS, q * TIME_LAYER_EXPORT_STEP, OUTPUT_FOLDER_ORDER_TEST_2);
+		nbody_serial(bodies, TIME_INTERVAL, q * q * ITERATIONS, q * q * TIME_LAYER_EXPORT_STEP, OUTPUT_FOLDER_ORDER_TEST_3);
+	}
 }
 

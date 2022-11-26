@@ -21,7 +21,7 @@
 #define MASTER_PROCESS 0
 
 
-using T = double;
+using T = long double;
 inline static auto &outstream = std::cout;
 inline static auto &instream = std::cin;
 

@@ -3,13 +3,20 @@
 #include <vector>
 #include <filesystem>
 
+#include "static_timer.hpp"
 #include "point_particle.hpp"
 
 const T G = 6.67e-11;
-const T EPSILON = 1e-5;
+const T EPSILON = 1e-10;
+
+template <typename T>
+inline T pow32(T pow2)
+{
+	return pow2 * sqrt(pow2);
+}
 
 inline Vec3 acceleration(const Vec3 &dr, T mass) {
-	return dr * G * mass / std::max(cube(dr.norm()), cube(EPSILON));
+	return dr * (mass / std::max(/*cube(dr.norm())*/pow32(dr.norm2()), cube(EPSILON)));
 }
 
 void clean_folder(const std::string &folder) {
@@ -32,14 +39,18 @@ void export_time_layer(
 
 	std::ofstream outFile;
 
+	const std::streamsize PRECISION = 17;
+
 	for (size_t i = 0; i < N; ++i) {
 
 		outFile.open(filenames[i], std::ios::app); // open for append
 		if (!outFile.is_open()) exit_with_error("Could not open output file " + filenames[i]);
 
 		outFile
-			<< t << ' '
-			<< bodies[i].position.x << ' ' << bodies[i].position.y << ' ' << bodies[i].position.z << '\n';
+			<< std::setprecision(PRECISION) << t << ' '
+			<< std::setprecision(PRECISION) << bodies[i].position.x << ' '
+			<< std::setprecision(PRECISION) << bodies[i].position.y << ' '
+			<< std::setprecision(PRECISION) << bodies[i].position.z << '\n';
 
 		outFile.close();
 	}
@@ -49,12 +60,13 @@ void export_time_layer(
 inline void nbody_serial(
 	ArrayOfBodies bodies, // pas-by-copy since we're going to modify bodies localy 
 	const T TIME_INTERVAL,
-	const size_t iterations,  
+	const size_t iterations,
 	const size_t time_layer_export_step,
 	const std::string &output_folder
 ) {
 	const size_t N = bodies.size();
 	const T tau = TIME_INTERVAL / iterations;
+	const T htau = tau / 2;
 
 	// Each body stores it's positions in a separate file 'positions_<index>'
 	// using 't  pos.x  pos.y  pos.z' format on each line
@@ -79,7 +91,8 @@ inline void nbody_serial(
 	// ---------------------------
 	// --- Iteration over time ---
 	// ---------------------------
-	for (size_t i = 0; i < iterations; i++) {
+	for (size_t s = 0; s < iterations; s++) {
+		StaticTimer::start();
 
 		// ---------------------
 		// --- Runge-Kutta 2 ---
@@ -88,30 +101,70 @@ inline void nbody_serial(
 		copy(bodies, temp_bodies);
 
 		// k1 = f(t_n, y_n)
+		// k2 = f(t_n + tau, y_n + tau * k1 )
+		Vec3 tmp;
 		for (size_t i = 0; i < N; ++i) {
-			a[i] = { 0, 0, 0 };
-			for (size_t j = 0; j < N; ++j)
-				a[i] -= acceleration(bodies[i].position - bodies[j].position, bodies[j].mass);
+			tmp = { 0, 0, 0 };
+			const Vec3& posI = bodies[i].position;
+			for (size_t j = 0; j < N; ++j) if (i != j)
+				tmp -= acceleration(posI - bodies[j].position, bodies[j].mass);
+
+			a[i] = tmp;
 
 			temp_bodies[i].position += bodies[i].velocity * tau;
-			temp_bodies[i].velocity += a[i] * tau;
+			temp_bodies[i].velocity += tmp * (tau * G);
 		}
-		// y_n+1 = y_n + tau * f(t_n + 1/2 tau, y_n + 1/2 tau k1)
+
+		// y_n+1 = y_n + tau * k2
 		for (size_t i = 0; i < N; ++i) {
 			temp_a = { 0, 0, 0 };
-			for (size_t j = 0; j < N; ++j)
-				temp_a -= acceleration(temp_bodies[i].position - temp_bodies[j].position, temp_bodies[j].mass);
+			const Vec3& tposI = temp_bodies[i].position;
+			for (size_t j = 0; j < N; ++j) if (i != j)
+				temp_a -= acceleration(tposI - temp_bodies[j].position, bodies[j].mass);
 
-			bodies[i].position += (temp_bodies[i].velocity + bodies[i].velocity) * tau * T(0.5);
-			bodies[i].velocity += (a[i] + temp_a) * tau * T(0.5);
+			bodies[i].position += (bodies[i].velocity + temp_bodies[i].velocity) * htau;
+			bodies[i].velocity += (a[i] + temp_a) * (G * htau);
 		}
 
 		// Export time layer with respect to 'TIME_LAYER_EXPORT_STEP'
-		if(!((i + 1) % time_layer_export_step)) export_time_layer(tau * (i + 1), bodies, filenames);
+		if (!((s + 1) % time_layer_export_step)) export_time_layer(tau * (s + 1), bodies, filenames);
+
+		std::cout << StaticTimer::end() << " sec\n";
 	}
+
+
 }
 
 
+///
+//for (size_t i = 0; i < N; ++i) {
+//	temp_a = { 0, 0, 0 };
+//	for (size_t j = 0; j < N; ++j) if (i != j)
+//		temp_a -= acceleration(temp_bodies[i].position - temp_bodies[j].position, bodies[j].mass);
+//
+//	bodies[i].position += (bodies[i].velocity + temp_bodies[i].velocity) * tau * 0.5;
+//	bodies[i].velocity += (a[i] + temp_a) * tau * 0.5;
+//}
+
+/// asda
+//// k1 = f(t_n, y_n)
+//for (size_t i = 0; i < N; ++i) {
+//	a[i] = { 0, 0, 0 };
+//	for (size_t j = 0; j < N; ++j) if (i != j)
+//		a[i] -= acceleration(bodies[i].position - bodies[j].position, bodies[j].mass);
+//
+//	temp_bodies[i].position += bodies[i].velocity * tau;
+//	temp_bodies[i].velocity += a[i] * tau;
+//}
+//// y_n+1 = y_n + tau * (f(t_n + tau / 2, y_n + tau / 2 * k1) 
+//for (size_t i = 0; i < N; ++i) {
+//	temp_a = { 0, 0, 0 };
+//	for (size_t j = 0; j < N; ++j) if (i != j)
+//		temp_a -= acceleration(temp_bodies[i].position - temp_bodies[j].position, temp_bodies[j].mass);
+//
+//	bodies[i].position += (bodies[i].velocity + temp_bodies[i].velocity * tau / 2) * tau;
+//	bodies[i].velocity += (a[i] + temp_a * tau / 2) * tau;
+//}
 
 // Explicit Euler iteration
 		/*for (size_t i = 0; i < N; ++i) {
