@@ -6,54 +6,6 @@
 #include "static_timer.hpp"
 #include "point_particle.hpp"
 
-#define BENCHMARK_MODE true
-#define DEFAULT_MODE false
-
-
-const T G = 6.67e-11;
-const T EPSILON = 1e-10;
-
-inline Vec3 acceleration(const Vec3 &dr, T mass) {
-	return dr * (mass / std::max(dr.norm3(), cube(EPSILON)));
-}
-
-void clean_folder(const std::string &folder) {
-	for (const auto &entry : std::filesystem::directory_iterator(folder))
-		std::filesystem::remove_all(entry.path());
-}
-
-void create_empty_files(const std::vector<std::string> &filenames) {
-	for (const auto &filename : filenames) {
-		std::ofstream outFile(filename);
-	}
-}
-
-void export_time_layer(
-	T t,
-	const ArrayOfBodies &bodies,
-	const std::vector<std::string> &filenames
-) {
-	const size_t N = bodies.size();
-
-	std::ofstream outFile;
-
-	const std::streamsize PRECISION = 17;
-
-	for (size_t i = 0; i < N; ++i) {
-
-		outFile.open(filenames[i], std::ios::app); // open for append
-		if (!outFile.is_open()) exit_with_error("Could not open output file " + filenames[i]);
-
-		outFile
-			<< std::setprecision(PRECISION) << t << ' '
-			<< std::setprecision(PRECISION) << bodies[i].position.x << ' '
-			<< std::setprecision(PRECISION) << bodies[i].position.y << ' '
-			<< std::setprecision(PRECISION) << bodies[i].position.z << '\n';
-
-		outFile.close();
-	}
-}
-
 
 inline void nbody_serial(
 	ArrayOfBodies bodies, // pas-by-copy since we're going to modify bodies localy 
@@ -65,7 +17,7 @@ inline void nbody_serial(
 ) {
 	const size_t N = bodies.size();
 	const T tau = TIME_INTERVAL / iterations;
-	const T htau = tau / 2;
+	const T halftau = tau / 2;
 
 	std::vector<std::string> filenames;
 	if (!benchmark_mode) {
@@ -120,8 +72,8 @@ inline void nbody_serial(
 			for (size_t j = 0; j < N; ++j) if (i != j)
 				temp_a -= acceleration(tposI - temp_bodies[j].position, bodies[j].mass);
 
-			bodies[i].position += (bodies[i].velocity + temp_bodies[i].velocity) * htau;
-			bodies[i].velocity += (a[i] + temp_a) * (G * htau);
+			bodies[i].position += (bodies[i].velocity + temp_bodies[i].velocity) * halftau;
+			bodies[i].velocity += (a[i] + temp_a) * (G * halftau);
 		}
 
 		// Export time layer with respect to 'TIME_LAYER_EXPORT_STEP'

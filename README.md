@@ -26,6 +26,12 @@ $$a_i = -\sum\limits_{j = 1, i \ne j}^{N}{\dfrac{G m_j (r_i - r_j)}{\left|r_i - 
 
 ## Version history
 
+
+* 00.05
+    * Added MPI datatypes for 'Vec3' and 'Body'
+    * Added MPI implementation for N-body problem
+    * Refactors
+
 * 00.04
     * Fixed convergence order computatuion
     * Rearranged operations and memory access in Runge-Kutta iterations for optimal performance
