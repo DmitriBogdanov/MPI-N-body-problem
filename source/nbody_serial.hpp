@@ -4,7 +4,7 @@
 #include <filesystem>
 
 #include "static_timer.hpp"
-#include "point_particle.hpp"
+#include "body.hpp"
 
 
 inline void nbody_serial(

@@ -11,9 +11,11 @@
 
 
 #include <memory>
+#include <cstring>
 #include <cmath>
 #include <iostream>
-#include <fstream> // test
+#include <iomanip>
+#include <fstream>
 #include <functional>
 #include <mpi.h>
 

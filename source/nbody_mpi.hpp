@@ -4,7 +4,7 @@
 #include <filesystem>
 
 #include "static_timer.hpp"
-#include "point_particle.hpp"
+#include "body.hpp"
 
 #define RPRINT std::cout << "[" << MPI_rank << "]>" <<
 #define RFLUSH << std::flush;
@@ -25,8 +25,8 @@ inline void nbody_mpi(
 
 	// Set up MPI alignments
 	// Each process processes a 'block' of bodies
-	const int   block_size        = N / MPI_size;
-	const int   block_start_index = MPI_rank * block_size;
+	const int block_size        = N / MPI_size;
+	const int block_start_index = MPI_rank * block_size;
 
 	std::vector<std::string> filenames;
 	if (!benchmark_mode) {

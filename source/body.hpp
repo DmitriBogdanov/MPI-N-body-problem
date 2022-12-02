@@ -48,10 +48,14 @@ void export_time_layer(
 
 	const std::streamsize PRECISION = 17;
 
+	/// Saving to a single memory-mapped file would be orders of magnitude faster, however we trade speed
+	/// for debugging convenience and save positions to separate files for each body
 	for (size_t i = 0; i < N; ++i) {
 
 		outFile.open(filenames[i], std::ios::app); // open for append
 		if (!outFile.is_open()) exit_with_error("Could not open output file " + filenames[i]);
+			// we have to reopen and close files due to limitation on simultanious file handles 
+			// (~a few hundred), otherwise keeping them open would be faster
 
 		outFile
 			<< std::setprecision(PRECISION) << t << ' '
@@ -62,7 +66,6 @@ void export_time_layer(
 		outFile.close();
 	}
 }
-
 
 /// TEMP
 void print_array_of_bodies(int rank, const ArrayOfBodies &bodies) {

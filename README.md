@@ -26,6 +26,9 @@ $$a_i = -\sum\limits_{j = 1, i \ne j}^{N}{\dfrac{G m_j (r_i - r_j)}{\left|r_i - 
 
 ## Version history
 
+* 01.00
+    * Removed creation of temp file when generating random bodies
+
 
 * 00.05
     * Added MPI datatypes for 'Vec3' and 'Body'
