@@ -24,8 +24,8 @@
 // --------------------
 // --- Numeric type ---
 // --------------------
-using T = double;
-#define MPI_T MPI_DOUBLE
+using T = float;
+#define MPI_T MPI_FLOAT
 
 
 

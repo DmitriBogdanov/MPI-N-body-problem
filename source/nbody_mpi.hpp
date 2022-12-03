@@ -36,7 +36,7 @@ inline void nbody_mpi(
 		// Setup filenames
 		filenames.resize(block_size);
 		for (size_t i = 0; i < block_size; ++i)
-			filenames[i] =
+			filenames.at(i) =
 			output_folder + "/positions_" + std::to_string(block_start_index + i + 1) + ".txt";
 
 		if (MPI_rank == 0) {
@@ -71,15 +71,15 @@ inline void nbody_mpi(
 		// k2 = f(t_n + tau, y_n + tau * k1 )
 		for (size_t i = block_start_index; i < block_start_index + block_size; ++i) {
 			temp_a.set_zero();
-			const Vec3& posI = bodies[i].position;
+			const Vec3& posI = bodies.at(i).position;
 			for (size_t j = 0; j < N; ++j) if (i != j)
-				temp_a -= acceleration(posI - bodies[j].position, bodies[j].mass);
+				temp_a -= acceleration(posI - bodies.at(j).position, bodies.at(j).mass);
 
-			a[i - block_start_index] = temp_a;
+			a.at(i - block_start_index) = temp_a;
 
-			temp_positions[i] = bodies[i].position
-				+ bodies[i].velocity * tau;
-			temp_velocities[i - block_start_index] = bodies[i].velocity
+			temp_positions.at(i) = bodies.at(i).position
+				+ bodies.at(i).velocity * tau;
+			temp_velocities.at(i - block_start_index) = bodies.at(i).velocity
 				+ temp_a * (tau * G);
 		}
 
@@ -93,12 +93,12 @@ inline void nbody_mpi(
 		// y_n+1 = y_n + tau * k2
 		for (size_t i = block_start_index; i < block_start_index + block_size; ++i) {
 			temp_a.set_zero();
-			const Vec3& tposI = temp_positions[i];
+			const Vec3& tposI = temp_positions.at(i);
 			for (size_t j = 0; j < N; ++j) if (i != j)
-				temp_a -= acceleration(tposI - temp_positions[j], bodies[j].mass);
+				temp_a -= acceleration(tposI - temp_positions.at(j), bodies.at(j).mass);
 
-			bodies[i].position += (bodies[i].velocity + temp_velocities[i - block_start_index]) * halftau;
-			bodies[i].velocity += (a[i - block_start_index] + temp_a) * (G * halftau);
+			bodies.at(i).position += (bodies.at(i).velocity + temp_velocities.at(i - block_start_index)) * halftau;
+			bodies.at(i).velocity += (a.at(i - block_start_index) + temp_a) * (G * halftau);
 		}
 
 		MPI_Allgather(

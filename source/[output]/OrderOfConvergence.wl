@@ -13,6 +13,9 @@
 (**)
 (*\[CapitalNu]=Length@filenames\[FilledSmallSquare]precise; (* Number of bodies is the same as number of files containing positions *)*)
 (**)
+(*(* --------------------- *)*)
+(*(* --- Difference between serial and parallel solutions --- *)*)
+(**)
 (*(* We use 1st body for error computation *)*)
 (*bodynum=1;*)
 (**)
@@ -66,6 +69,3 @@
 (**)
 (*Print@Row@{"(Using 'precise' solution) Convergence order = ",convergenceOrder};*)
 (**)
-
-
-

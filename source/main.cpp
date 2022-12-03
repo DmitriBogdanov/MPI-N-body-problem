@@ -20,7 +20,7 @@ const std::string OUTPUT_FOLDER     = "[output]/[positions]";
 const std::string OUTPUT_FOLDER_MPI = "[output]/{mpi}[positions]";
 
 bool BENCHMARK_MODE = false;
-bool TEST_CONVERGENCE_ORDER = false;
+bool TEST_CONVERGENCE_ORDER = true;
 bool USE_RANDOM_BODIES = false;
 
 // # Random config #

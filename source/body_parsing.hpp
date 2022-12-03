@@ -3,7 +3,6 @@
 #include "utils.hpp"
 #include "body.hpp"
 
-
 // Input format: 
 // N - number of bodies
 // m1 x10 y10 z10 Vx10 Vy10 Vz10 - mass, position, velocity (1-st body)
