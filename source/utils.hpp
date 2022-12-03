@@ -17,6 +17,7 @@
 #include <iomanip>
 #include <fstream>
 #include <functional>
+#include <typeinfo>
 #include <mpi.h>
 
 

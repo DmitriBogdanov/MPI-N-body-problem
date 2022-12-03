@@ -4,7 +4,8 @@
 #include "vec3.hpp"
 
 // Bodies are assumed to be material points
-struct Body {
+class Body {
+public:
 	T mass;
 	Vec3 position;
 	Vec3 velocity; 
@@ -74,14 +75,38 @@ void print_array_of_bodies(int rank, const ArrayOfBodies &bodies) {
 
 	str.append("-> Rank {");
 	str.append(std::to_string(rank));
-	str.append("}: ");
+	str.append("}:\n");
 
 	for (int i = 0; i < bodies.size(); ++i) {
 		const auto &body = bodies[i];
 
-		str.append("(");
+		str.append("\nmass=[");
+		str.append(std::to_string(body.mass));
+		str.append("]");
+
+		str.append("\npos={");
 		str.append(std::to_string(body.position.x));
-		str.append(")");
+		str.append(", ");
+
+		str.append("");
+		str.append(std::to_string(body.position.y));
+		str.append(", ");
+
+		str.append("");
+		str.append(std::to_string(body.position.z));
+		str.append("}");
+
+		str.append("\nvel={");
+		str.append(std::to_string(body.velocity.x));
+		str.append(", ");
+
+		str.append("");
+		str.append(std::to_string(body.velocity.y));
+		str.append(", ");
+
+		str.append("");
+		str.append(std::to_string(body.velocity.z));
+		str.append("}\n");
 	}
 
 	std::cout << str << std::endl;

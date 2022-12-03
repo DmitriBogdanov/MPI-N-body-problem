@@ -3,14 +3,15 @@
 
 #include "nbody_serial.hpp"
 #include "nbody_mpi.hpp"
+#include "body_parsing.hpp"
 #include "static_timer.hpp"
 #include "table.hpp"
 
 
 // # Config #
 const T TIME_INTERVAL = 20; //2.419e+6; // 28 days
-const size_t ITERATIONS = 200;
-const size_t TIME_LAYER_EXPORT_STEP = ITERATIONS / 20;
+const size_t ITERATIONS = 2000;
+const size_t TIME_LAYER_EXPORT_STEP = ITERATIONS / 200;
 	// set 'TIME_LAYER_EXPORT_STEP > ITERATIONS'
 	// to benhmark without accounting for writes
 
@@ -18,12 +19,12 @@ const std::string input_filename    = "[input]/{4_body_test}[bodies].txt";
 const std::string OUTPUT_FOLDER     = "[output]/[positions]";
 const std::string OUTPUT_FOLDER_MPI = "[output]/{mpi}[positions]";
 
-bool BENCHMARK_MODE = true;
+bool BENCHMARK_MODE = false;
 bool TEST_CONVERGENCE_ORDER = false;
-bool USE_RANDOM_BODIES = true;
+bool USE_RANDOM_BODIES = false;
 
 // # Random config #
-const size_t RANDOM_N = 10800;
+const size_t RANDOM_N = 3200;
 const T RANDOM_M_MIN = 5e4, RANDOM_M_MAX = 50e4; // mass (range)
 const T RANDOM_R_MIN = 10, RANDOM_R_MAX = 100; // position(spherical section)
 const T RANDOM_V_MIN = 1, RANDOM_V_MAX = 5; // velocity (range)
@@ -36,78 +37,10 @@ const std::string OUTPUT_FOLDER_ORDER_TEST_3 = "[output]/{order_test_3}[position
 const T q = 2;
 
 
-// Input format: 
-// N - number of bodies
-// m1 x10 y10 z10 Vx10 Vy10 Vz10 - mass, position, velocity (1-st body)
-// ...
-// mN xN0 yN0 zN0 VxN0 VyN0 VzN0 - mass, position, velocity (N-th body)
-//
-ArrayOfBodies parse_bodies_from_file(
-	const std::string &input_filename
-) {
-	std::ifstream inFile(input_filename);
-	if (!inFile.is_open()) exit_with_error("Could not open input file");
-
-	size_t N;
-	inFile >> N;
-
-	ArrayOfBodies bodies(N);
-
-	for (size_t i = 0; i < N; ++i)
-		inFile
-			>> bodies[i].mass
-			>> bodies[i].position.x >> bodies[i].position.y >> bodies[i].position.z
-			>> bodies[i].velocity.x >> bodies[i].velocity.y >> bodies[i].velocity.z;
-
-	return bodies;
-}
-
-void save_bodies_to_file(
-	const std::string &output_filename,
-	const ArrayOfBodies &bodies
-) {
-	std::ofstream outFile(output_filename);
-	if (!outFile.is_open()) exit_with_error("Could not open file " + output_filename);
-
-	outFile
-		<< bodies.size() << '\n';
-
-	for (size_t i = 0; i < bodies.size(); ++i)
-		outFile
-			<< bodies[i].mass << ' '
-			<< bodies[i].position.x << ' ' << bodies[i].position.y << ' ' << bodies[i].position.z << ' '
-			<< bodies[i].velocity.x << ' ' << bodies[i].velocity.y << ' ' << bodies[i].velocity.z << '\n';
-}
-
-// Generates N bodies uniformly distributed inside a sphere (or spherical layer)
-ArrayOfBodies generate_random_input(
-	size_t N,
-	T m_min, T m_max, // mass (range)
-	T r_min, T r_max, // position (spherical layer)
-	T v_min, T v_max // velocity (range) (velocities have random directions)
-) {
-	srand(1);
-
-	ArrayOfBodies bodies;
-	bodies.reserve(N);
-
-	for (size_t i = 0; i < N; ++i) {
-		const T mass = rand_T(m_min, m_max);
-		const Vec3 position = make_random_vector(r_min, r_max);
-		const Vec3 velocity = make_random_vector(v_min, v_max);
-
-		bodies.emplace_back(mass, position, velocity);
-	}
-
-	return bodies;
-}
-
-
 int main(int argc, char* argv[]) {
 	// ------------------
 	// --- Set up MPI ---
 	// ------------------
-
 	MPI_Init(&argc, &argv);
 
 	// Get rank and size
@@ -150,6 +83,7 @@ int main(int argc, char* argv[]) {
 			<< "Output folder -> " << OUTPUT_FOLDER << "\n"
 			<< "Order test    -> " << bool_to_str(TEST_CONVERGENCE_ORDER) << "\n"
 			<< "Mode          -> " << (BENCHMARK_MODE ? "BENCHMARK" : "DEFAULT") << "\n"
+			<< "Type          -> " << typeid(T).name() << "\n"
 			<< "N             =  " << bodies.size() << "\n"
 			<< "Time interval =  " << TIME_INTERVAL << "\n"
 			<< "Iterations    =  " << ITERATIONS << "\n"
@@ -204,20 +138,46 @@ int main(int argc, char* argv[]) {
 		MPI_Type_commit(&MPI_BODY);
 	}
 
+	// -----------------------------------
+	// --- Part type for Body.position ---
+	// -----------------------------------
+	MPI_Datatype MPI_BODY_PART_TMP;
+	MPI_Datatype MPI_BODY_PART;
+	{
+		int membercount = 3;
+		int blocklengths[] = {
+			1, 1, 1
+		};
+		MPI_Datatype types[] = {
+			MPI_T, MPI_T, MPI_T
+		};
+		MPI_Aint offsets[] = {
+			offsetof(Body, position.x), offsetof(Body, position.y), offsetof(Body, position.z)
+		};
+
+		MPI_Type_create_struct(membercount, blocklengths, offsets, types, &MPI_BODY_PART_TMP);
+
+		MPI_Aint lb, extent;
+		MPI_Type_get_extent(MPI_BODY, &lb, &extent);
+
+		MPI_Type_create_resized(MPI_BODY_PART_TMP, lb, extent, &MPI_BODY_PART);
+		MPI_Type_commit(&MPI_BODY_PART);
+	}
+
 	// ----------------------------------------
 	// --- Broadcast parsed bodies from {0} ---
 	// ----------------------------------------
 	int N = bodies.size();
+	MPI_Barrier(MPI_COMM_WORLD);
 	MPI_Bcast(&N, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
 	if (MPI_rank != 0) bodies.resize(N);
 	MPI_Bcast(bodies.data(), bodies.size(), MPI_BODY, 0, MPI_COMM_WORLD);
-	
+
 	// ---------------
 	// --- Methods ---
 	// ---------------
-	
-	double timeSerial   = -1;
+	double timeSerial = -1;
 	double timeParallel = -1;
 
 	// Draw a table
@@ -231,7 +191,6 @@ int main(int argc, char* argv[]) {
 	// ------------------------
 	// --- 1) Serial method ---
 	// ------------------------
-
 	if (MPI_rank == 0) {
 		// 1. Method
 		table_add_1("Serial");
@@ -249,10 +208,11 @@ int main(int argc, char* argv[]) {
 		table_add_3(timeSerial / timeSerial);
 	}
 
+	
+
 	// --------------------------
 	// --- 2) Parallel method ---
 	// --------------------------
-
 	if (bodies.size() % MPI_size != 0) exit_with_error("N is not divisible by MPI_size");
 
 	// 1. Method
@@ -263,7 +223,7 @@ int main(int argc, char* argv[]) {
 
 	if (MPI_rank == 0) StaticTimer::start();
 	nbody_mpi(
-		MPI_rank, MPI_size, MPI_VEC3, MPI_BODY,
+		MPI_rank, MPI_size, MPI_VEC3, MPI_BODY_PART,
 		bodies, TIME_INTERVAL, ITERATIONS, TIME_LAYER_EXPORT_STEP, OUTPUT_FOLDER_MPI, BENCHMARK_MODE
 	);
 	MPI_Barrier(MPI_COMM_WORLD);
@@ -293,6 +253,8 @@ int main(int argc, char* argv[]) {
 
 	MPI_Type_free(&MPI_VEC3);
 	MPI_Type_free(&MPI_BODY);
+	MPI_Type_free(&MPI_BODY_PART_TMP);
+	MPI_Type_free(&MPI_BODY_PART);
 	MPI_Finalize();
 
 	return 0;

@@ -44,7 +44,7 @@
 (*PlotLabel->Row@{*)
 (*Framed["layer = "<>ToString@NumberForm[layer,{3,1}]],*)
 (*"  ",*)
-(*Framed["t = "<>ToString@\[CapitalXi]times\[FilledSquare]by\[FilledSquare]layer[[layer]]]*)
+(*Framed["t = "<>ToString@NumberForm[\[CapitalXi]times\[FilledSquare]by\[FilledSquare]layer[[layer]],{3,1}]]*)
 (*},*)
 (*PlotRange->{{x\[FilledSquare]min,x\[FilledSquare]max},{y\[FilledSquare]min,y\[FilledSquare]max},{z\[FilledSquare]min,z\[FilledSquare]max}},*)
 (*Axes->True,*)

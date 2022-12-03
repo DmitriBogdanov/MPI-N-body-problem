@@ -54,9 +54,10 @@ inline void nbody_mpi(
 	}
 
 	// Preallocate space for Runge-Kutta temp variables
-	std::vector<Vec3> a(N);
+	std::vector<Vec3> a(block_size);
 	Vec3 temp_a;
-	std::vector<Body> temp_bodies(N);
+	std::vector<Vec3> temp_positions(N);
+	std::vector<Vec3> temp_velocities(block_size);
 
 	// ---------------------------
 	// --- Iteration over time ---
@@ -66,8 +67,6 @@ inline void nbody_mpi(
 		// --- Runge-Kutta 2 ---
 		// ---------------------
 
-		std::copy(bodies.begin(), bodies.end(), temp_bodies.begin());
-
 		// k1 = f(t_n, y_n)
 		// k2 = f(t_n + tau, y_n + tau * k1 )
 		for (size_t i = block_start_index; i < block_start_index + block_size; ++i) {
@@ -76,32 +75,30 @@ inline void nbody_mpi(
 			for (size_t j = 0; j < N; ++j) if (i != j)
 				temp_a -= acceleration(posI - bodies[j].position, bodies[j].mass);
 
-			a[i] = temp_a;
+			a[i - block_start_index] = temp_a;
 
-			temp_bodies[i].position += bodies[i].velocity * tau;
-			temp_bodies[i].velocity += temp_a * (tau * G);
+			temp_positions[i] = bodies[i].position
+				+ bodies[i].velocity * tau;
+			temp_velocities[i - block_start_index] = bodies[i].velocity
+				+ temp_a * (tau * G);
 		}
 
+		// Sync temp_positions
 		MPI_Allgather(
 			MPI_IN_PLACE, 0, MPI_DATATYPE_NULL,
-			a.data(), block_size, MPI_VEC3,
-			MPI_COMM_WORLD
-		);
-		MPI_Allgather(
-			MPI_IN_PLACE, 0, MPI_DATATYPE_NULL,
-			temp_bodies.data(), block_size, MPI_BODY,
+			temp_positions.data(), block_size, MPI_VEC3,
 			MPI_COMM_WORLD
 		);
 
 		// y_n+1 = y_n + tau * k2
 		for (size_t i = block_start_index; i < block_start_index + block_size; ++i) {
 			temp_a.set_zero();
-			const Vec3& tposI = temp_bodies[i].position;
+			const Vec3& tposI = temp_positions[i];
 			for (size_t j = 0; j < N; ++j) if (i != j)
-				temp_a -= acceleration(tposI - temp_bodies[j].position, bodies[j].mass);
+				temp_a -= acceleration(tposI - temp_positions[j], bodies[j].mass);
 
-			bodies[i].position += (bodies[i].velocity + temp_bodies[i].velocity) * halftau;
-			bodies[i].velocity += (a[i] + temp_a) * (G * halftau);
+			bodies[i].position += (bodies[i].velocity + temp_velocities[i - block_start_index]) * halftau;
+			bodies[i].velocity += (a[i - block_start_index] + temp_a) * (G * halftau);
 		}
 
 		MPI_Allgather(
