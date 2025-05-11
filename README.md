@@ -19,6 +19,9 @@ $$a_i = -\sum\limits_{j = 1, i \ne j}^{N}{\dfrac{G m_j (r_i - r_j)}{\left|r_i - 
 
 The differential system is integrated numerically, which can be done in a highly parallel fashion, synchronization points depend on the method, here 2nd order Runge-Kutta is used.
 
+> [!Note]
+> Present implementation serves mainly as an **academic reference** for implementing efficient MPI parallelism using N-body problem as an example.
+
 ## Compilation
 
 * Requires C++17 support 
